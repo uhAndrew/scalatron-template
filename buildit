@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sbt package && cp target/scala-2.9.0-1/ScalatronBot.jar ../Scalatron/bots/Andrew/
