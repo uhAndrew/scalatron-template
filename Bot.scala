@@ -59,9 +59,9 @@ trait BotUtils {
   //MarkCell(position=int:int,color=string)
   def markcell(p:Position, color:String) = "MarkCell(" + p + "," + color + ")"
 
-  def react(m:Map[String, String], v:View)
+  def react(m:inputMap, v:View):String
 
-  def canSpawn(m:Map[String, String]):Boolean
+  def canSpawn(m:inputMap):Boolean = false
 }
 
 class Bot extends BotUtils {
@@ -78,26 +78,26 @@ class Bot extends BotUtils {
         println(setKV(kvset))
         ""
 
-      case ("React", m:Map[String,String]) => 
+      case ("React", m:inputMap) => 
         dispatchReact(m)
 
-      case (str, m:Map[String,String]) => 
+      case (str, m:inputMap) => 
         println("unknown opcode: " + str)
         move(Direction(-1,-1))
     }
 
   }
 
-  override def canSpawn(m:Map[String, String]) = {
+  override def canSpawn(m:inputMap) = {
     false
   }
 
-  override def react(m:Map[String, String], v:View) = {
+  override def react(m:inputMap, v:View) = {
       //println("React " + {m get viewKey})
       move(Direction(1,1))
   }
 
-  def dispatchReact(m:Map[String,String]) = {
+  def dispatchReact(m:inputMap) = {
     val generation = m.getOrElse(generationKey, "0").toInt
     val view = View(m(viewKey))
 
@@ -111,11 +111,9 @@ class Bot extends BotUtils {
 }
 
 object SlaveBot extends BotUtils {
-  override def react(m:Map[String, String], v:View) = {
+  override def react(m:inputMap, v:View) = {
     move(Direction(1,1))
   }
-
-  override def canSpawn(m:Map[String, String]) = false
 }
 
 /** Utility methods for parsing strings containing a single command of the format
