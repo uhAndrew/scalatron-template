@@ -55,8 +55,10 @@ trait BotUtils {
   val generationKey = "generation"
   val viewKey = "view"
   val energyKey = "energy"
+  val spawnDelayKey = "spawndelay"
 
   def energySpawnMin = 400
+  def spawnDelayTicks = 10
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
 
@@ -79,6 +81,15 @@ trait BotUtils {
   def canSpawn(m:inputMap):Boolean = false
 
   def prependBar(s:String) = "|" + s
+
+  def spawnDelay = setKV(Set(BotProperty(spawnDelayKey, spawnDelayTicks.toString)))
+
+  def decSpawnDelay(m:inputMap) = {
+    val ticks = m.getOrElse(spawnDelayKey, "1").toInt
+    val decTicks = if (ticks > 0) ticks - 1 else ticks
+    setKV(Set(BotProperty("spawndelay", decTicks.toString)))
+  }
+
 }
 
 class Bot extends BotUtils {
@@ -96,7 +107,9 @@ class Bot extends BotUtils {
         ""
 
       case ("React", m:inputMap) => 
-        dispatchReact(m)
+        val str = dispatchReact(m)
+        println(str)
+        str
 
       case (str, m:inputMap) => 
         println("unknown opcode: " + str)
@@ -107,14 +120,15 @@ class Bot extends BotUtils {
 
   override def canSpawn(m:inputMap) = {
     val energy = m.getOrElse(energyKey, "0").toInt
-    energy > energySpawnMin
+    val spawndelay = m.getOrElse(spawnDelayKey, "0").toInt
+    energy > energySpawnMin && spawndelay == 0
   }
 
   def maybeSpawn(m:inputMap, v:View):String = {
     if (canSpawn(m)) {
-      prependBar(spawn(v.otherBotDirection))
+      prependBar(spawn(v.otherBotDirection)) + prependBar(spawnDelay)
     } else {
-      ""
+      prependBar(decSpawnDelay(m))
     }
   }
 
@@ -137,8 +151,22 @@ class Bot extends BotUtils {
 }
 
 object SlaveBot extends BotUtils {
+  def explodeEnergy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
+
+  def nearOtherBot(m:inputMap, v:View) = {
+    false
+  }
+
+  def maybeExplode(m:inputMap, v:View) = {
+    if (nearOtherBot(m:inputMap, v:View)) {
+      prependBar(explode(explodeEnergy(m)))
+    } else {
+      ""
+    }
+  }
+
   override def react(m:inputMap, v:View) = {
-    move(v.otherBotDirection)
+    move(v.otherBotDirection) + maybeExplode(m, v)
   }
 }
 
