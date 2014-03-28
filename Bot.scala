@@ -1,4 +1,6 @@
 
+import scala.util.Random
+
 class ControlFunctionFactory {
   def create = new Bot().respond _
 }
@@ -20,23 +22,44 @@ case class View(val viewStr:String) {
   val sideLength = math.sqrt(viewStr.length).toInt
   val selfPos = Position(sideLength / 2, sideLength / 2)
 
+  // http://daily-scala.blogspot.ca/2010/05/zipwithindex.html
+  // uses "view" 
+  /*
+   * scala> s.view.zipWithIndex
+   * res0: Seq[(Char, Int)] = SeqViewZ(...)
+   */
+
+  val indexedViewStr = viewStr.view.zipWithIndex
+
   // where to go to get food
-  def foodDirection:Direction = {
-    Direction(-1,-1)
+  // very dumb
+  def foodDirection2:Direction = {
+    val allFoodCells = indexedViewStr.filter {
+      case (c, idx) => c == 'P' || c == 'B'
+    }
+
+    val blah = allFoodCells.sortBy {
+      case (c, idx) => {idx - viewStr.length/2}.abs
+    }
+
+    Direction(1,1)
   }
+
+  def randomDirection = Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
+
+  def foodDirection = randomDirection
 
   // don't go there??
   def dangerDirection = {
     Direction(0,0)
   }
 
-  def otherBotDirection:Direction = {
-    Direction(1,1)
-  }
+  def otherBotDirection:Direction = randomDirection
 
-  def safeDirection = {
+  def safeDirection(d:Direction) = {
     Direction(0,0)
   }
+
 }
 
 //case class StateValue, 
@@ -59,8 +82,8 @@ trait BotUtils {
   val energyKey = "energy"
   val spawnDelayKey = "spawndelay"
 
-  def energySpawnMin = 400
-  def spawnDelayTicks = 10
+  def energySpawnMin = 150
+  def spawnDelayTicks = 7
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
 
@@ -104,8 +127,6 @@ class Bot extends BotUtils {
 
     inputmap match {
       case ("Welcome", _) => 
-        val kvset = Set(BotProperty("one", "one!"), BotProperty("two", "two!"))
-        println(setKV(kvset))
         ""
 
       case ("React", m:inputMap) => 
@@ -123,11 +144,19 @@ class Bot extends BotUtils {
   override def canSpawn(m:inputMap) = {
     val energy = m.getOrElse(energyKey, "0").toInt
     val spawndelay = m.getOrElse(spawnDelayKey, "0").toInt
+    if (debug) {
+      println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
+    }
+    spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
     energy > energySpawnMin && spawndelay == 0
   }
 
   def maybeSpawn(m:inputMap, v:View):String = {
+    if (debug) {
+      println("in maybeSpawn")
+    }
     if (canSpawn(m)) {
+      if (debug) println("canSpawn=yes")
       prependBar(spawn(v.otherBotDirection)) + prependBar(spawnDelay)
     } else {
       prependBar(decSpawnDelay(m))
@@ -136,6 +165,7 @@ class Bot extends BotUtils {
 
   override def react(m:inputMap, v:View) = {
       //println("React " + {m get viewKey})
+      if (debug) println("Bot react")
       move(v.foodDirection) + maybeSpawn(m, v)
   }
 
@@ -156,11 +186,11 @@ object SlaveBot extends BotUtils {
   def explodeEnergy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
 
   def nearOtherBot(m:inputMap, v:View) = {
-    false
+    Random.nextInt(100) < 50
   }
 
   def maybeExplode(m:inputMap, v:View) = {
-    if (nearOtherBot(m:inputMap, v:View)) {
+    if (nearOtherBot(m, v)) {
       prependBar(explode(explodeEnergy(m)))
     } else {
       ""
