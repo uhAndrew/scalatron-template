@@ -25,6 +25,9 @@ trait BotUtils {
     case Direction(x,y) => move(x,y)
   }
 
+  val generationKey = "generation"
+  val viewKey = "view"
+
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
 
   // haha abusing Set.toString to get Set(....)
@@ -49,20 +52,32 @@ class Bot extends BotUtils {
     //log(CommandParser(input).toString)
 
     inputmap match {
-      case ("Welcome", _) => {
+      case ("Welcome", _) => 
         val kvset = Set(BotProperty("one", "one!"), BotProperty("two", "two!"))
         println(setKV(kvset))
         ""
-      }
-      case ("React", m:Map[String,String]) => react(m)
-      case (str, m:Map[String,String]) => move(Direction(-1,-1))
+
+      case ("React", m:Map[String,String]) => 
+        react(m)
+
+      case (str, m:Map[String,String]) => 
+        println("unknown opcode: " + str)
+        move(Direction(-1,-1))
     }
 
   }
 
   def react(m:Map[String,String]) = {
-    //println("React")
-    move(Direction(1,1))
+
+    val generation = m.getOrElse(generationKey, "0").toInt
+
+    // ugh
+    if (generation > 0) {
+      SlaveBot.react(m)
+    } else {
+      println("React " + {m get viewKey})
+      move(Direction(1,1))
+    }
   }
 
 }
