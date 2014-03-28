@@ -21,12 +21,22 @@ case class View(val viewStr:String) {
   val selfPos = Position(sideLength / 2, sideLength / 2)
 
   // where to go to get food
-  def foodDirection  = ""
+  def foodDirection:Direction = {
+    Direction(-1,-1)
+  }
 
   // don't go there??
-  def dangerDirection = ""
+  def dangerDirection = {
+    Direction(0,0)
+  }
 
-  def safeDirection = ""
+  def otherBotDirection:Direction = {
+    Direction(1,1)
+  }
+
+  def safeDirection = {
+    Direction(0,0)
+  }
 }
 
 //case class StateValue, 
@@ -44,8 +54,13 @@ trait BotUtils {
 
   val generationKey = "generation"
   val viewKey = "view"
+  val energyKey = "energy"
+
+  def energySpawnMin = 400
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
+
+  def spawn(dir:Direction) = "Spawn(" + dir.toString + ")"
 
   // haha abusing Set.toString to get Set(....)
   def setKV(kvs:Set[BotProperty]) = kvs.toString
@@ -62,6 +77,8 @@ trait BotUtils {
   def react(m:inputMap, v:View):String
 
   def canSpawn(m:inputMap):Boolean = false
+
+  def prependBar(s:String) = "|" + s
 }
 
 class Bot extends BotUtils {
@@ -89,12 +106,21 @@ class Bot extends BotUtils {
   }
 
   override def canSpawn(m:inputMap) = {
-    false
+    val energy = m.getOrElse(energyKey, "0").toInt
+    energy > energySpawnMin
+  }
+
+  def maybeSpawn(m:inputMap, v:View):String = {
+    if (canSpawn(m)) {
+      prependBar(spawn(v.otherBotDirection))
+    } else {
+      ""
+    }
   }
 
   override def react(m:inputMap, v:View) = {
       //println("React " + {m get viewKey})
-      move(Direction(1,1))
+      move(v.foodDirection) + maybeSpawn(m, v)
   }
 
   def dispatchReact(m:inputMap) = {
@@ -112,7 +138,7 @@ class Bot extends BotUtils {
 
 object SlaveBot extends BotUtils {
   override def react(m:inputMap, v:View) = {
-    move(Direction(1,1))
+    move(v.otherBotDirection)
   }
 }
 
