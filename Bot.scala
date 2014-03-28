@@ -58,7 +58,7 @@ class Bot extends BotUtils {
         ""
 
       case ("React", m:Map[String,String]) => 
-        react(m)
+        dispatchReact(m)
 
       case (str, m:Map[String,String]) => 
         println("unknown opcode: " + str)
@@ -67,16 +67,18 @@ class Bot extends BotUtils {
 
   }
 
-  def react(m:Map[String,String]) = {
+  def react(m:Map[String, String]) = {
+      println("React " + {m get viewKey})
+      move(Direction(1,1))
+  }
 
+  def dispatchReact(m:Map[String,String]) = {
     val generation = m.getOrElse(generationKey, "0").toInt
 
-    // ugh
     if (generation > 0) {
       SlaveBot.react(m)
     } else {
-      println("React " + {m get viewKey})
-      move(Direction(1,1))
+      react(m)
     }
   }
 
