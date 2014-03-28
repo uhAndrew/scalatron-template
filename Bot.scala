@@ -92,7 +92,7 @@ trait BotUtils {
   // haha abusing Set.toString to get Set(....)
   def setKV(kvs:Set[BotProperty]) = kvs.toString
 
-  def explode(s:Int) = "Explode(" + s + ")"
+  def explode(s:Int) = "Explode(size=" + s + ")"
 
   def say(s:String) = "Say(" + s + ")"
 
