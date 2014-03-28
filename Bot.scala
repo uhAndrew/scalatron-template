@@ -15,6 +15,10 @@ case class BotProperty(val k:String, val v: String) {
   override def toString = k + "=" + v
 }
 
+case class View(val viewStr:String) {
+  // process viewStr here
+}
+
 //case class StateValue, 
 //Set(key=value,...)
 
@@ -41,6 +45,8 @@ trait BotUtils {
 
   //MarkCell(position=int:int,color=string)
   def markcell(p:Position, color:String) = "MarkCell(" + p + "," + color + ")"
+
+  def react(m:Map[String, String], v:View)
 }
 
 class Bot extends BotUtils {
@@ -67,25 +73,26 @@ class Bot extends BotUtils {
 
   }
 
-  def react(m:Map[String, String]) = {
-      println("React " + {m get viewKey})
+  override def react(m:Map[String, String], v:View) = {
+      //println("React " + {m get viewKey})
       move(Direction(1,1))
   }
 
   def dispatchReact(m:Map[String,String]) = {
     val generation = m.getOrElse(generationKey, "0").toInt
+    val view = View(m(viewKey))
 
     if (generation > 0) {
-      SlaveBot.react(m)
+      SlaveBot.react(m, view)
     } else {
-      react(m)
+      react(m, view)
     }
   }
 
 }
 
 object SlaveBot extends BotUtils {
-  def react(m:Map[String, String]) = {
+  override def react(m:Map[String, String], v:View) = {
     move(Direction(1,1))
   }
 }
