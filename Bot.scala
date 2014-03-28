@@ -46,6 +46,8 @@ trait BotUtils {
 
   type inputMap = Map[String, String]
 
+  val debug = false
+
   def log(str:String) = "Log(text=" + str + ")"
   def move(x:Int, y:Int):String = "Move(direction=" + x + ":" + y + ")"
   def move(dir:Direction):String = dir match {
@@ -108,7 +110,7 @@ class Bot extends BotUtils {
 
       case ("React", m:inputMap) => 
         val str = dispatchReact(m)
-        println(str)
+        if (debug) println(str)
         str
 
       case (str, m:inputMap) => 
