@@ -17,12 +17,25 @@ case class BotProperty(val k:String, val v: String) {
 
 case class View(val viewStr:String) {
   // process viewStr here
+  val sideLength = math.sqrt(viewStr.length).toInt
+  val selfPos = Position(sideLength / 2, sideLength / 2)
+
+  // where to go to get food
+  def foodDirection  = ""
+
+  // don't go there??
+  def dangerDirection = ""
+
+  def safeDirection = ""
 }
 
 //case class StateValue, 
 //Set(key=value,...)
 
 trait BotUtils {
+
+  type inputMap = Map[String, String]
+
   def log(str:String) = "Log(text=" + str + ")"
   def move(x:Int, y:Int):String = "Move(direction=" + x + ":" + y + ")"
   def move(dir:Direction):String = dir match {
@@ -47,6 +60,8 @@ trait BotUtils {
   def markcell(p:Position, color:String) = "MarkCell(" + p + "," + color + ")"
 
   def react(m:Map[String, String], v:View)
+
+  def canSpawn(m:Map[String, String]):Boolean
 }
 
 class Bot extends BotUtils {
@@ -73,6 +88,10 @@ class Bot extends BotUtils {
 
   }
 
+  override def canSpawn(m:Map[String, String]) = {
+    false
+  }
+
   override def react(m:Map[String, String], v:View) = {
       //println("React " + {m get viewKey})
       move(Direction(1,1))
@@ -95,6 +114,8 @@ object SlaveBot extends BotUtils {
   override def react(m:Map[String, String], v:View) = {
     move(Direction(1,1))
   }
+
+  override def canSpawn(m:Map[String, String]) = false
 }
 
 /** Utility methods for parsing strings containing a single command of the format
