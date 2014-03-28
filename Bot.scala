@@ -1,4 +1,3 @@
-
 import scala.util.Random
 
 class ControlFunctionFactory {
@@ -70,6 +69,7 @@ trait BotUtils {
   type inputMap = Map[String, String]
 
   val debug = false
+  val chatty = true
 
   def log(str:String) = "Log(text=" + str + ")"
   def move(x:Int, y:Int):String = "Move(direction=" + x + ":" + y + ")"
@@ -82,7 +82,7 @@ trait BotUtils {
   val energyKey = "energy"
   val spawnDelayKey = "spawndelay"
 
-  def energySpawnMin = 150
+  def energySpawnMin = 200
   def spawnDelayTicks = 7
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
@@ -96,7 +96,7 @@ trait BotUtils {
 
   def say(s:String) = "Say(" + s + ")"
 
-  def status(s:String) = "Status(" + s + ")"
+  def status(s:String) = "Status(text=" + s + ")"
 
   //MarkCell(position=int:int,color=string)
   def markcell(p:Position, color:String) = "MarkCell(" + p + "," + color + ")"
@@ -144,9 +144,11 @@ class Bot extends BotUtils {
   override def canSpawn(m:inputMap) = {
     val energy = m.getOrElse(energyKey, "0").toInt
     val spawndelay = m.getOrElse(spawnDelayKey, "0").toInt
+
     if (debug) {
       println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
     }
+
     spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
     energy > energySpawnMin && spawndelay == 0
   }
@@ -163,10 +165,24 @@ class Bot extends BotUtils {
     }
   }
 
+  def energyStatus(m:inputMap) = {
+      val energy = m.getOrElse(energyKey, "0").toInt
+
+      chatty match {
+        case true => 
+          if (energy < 0) 
+            prependBar(status("uh_oh")) 
+          else 
+            prependBar(status("yay"))
+
+        case _ => ""
+      }
+  }
+
   override def react(m:inputMap, v:View) = {
       //println("React " + {m get viewKey})
       if (debug) println("Bot react")
-      move(v.foodDirection) + maybeSpawn(m, v)
+      move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
   }
 
   def dispatchReact(m:inputMap) = {
@@ -191,6 +207,7 @@ object SlaveBot extends BotUtils {
 
   def maybeExplode(m:inputMap, v:View) = {
     if (nearOtherBot(m, v)) {
+      if (debug) println("maybeExplode=yes")
       prependBar(explode(explodeEnergy(m)))
     } else {
       ""
