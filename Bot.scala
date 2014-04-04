@@ -10,13 +10,27 @@ case class Direction(val x:Int, val y:Int) {
 
 case class Position(val x:Int, val y:Int) {
   override def toString = "position=" + x + ":" + y
+
+  def add(pos:Position, sideLength: Int):Position = {
+    var newx = x + pos.x
+    var newy = y + pos.y
+
+    if (newx >= sideLength) {
+      newx = newx % sideLength
+      newy += 1
+    }
+
+    Position(newx, newy)
+  }
+
+  def toIndex(sideLength:Int) = x * sideLength + y
 }
 
 case class BotProperty(val k:String, val v: String) {
   override def toString = k + "=" + v
 }
 
-case class View(val viewStr:String) {
+case class View(val viewStr:String) extends Config {
   // process viewStr here
   val sideLength = math.sqrt(viewStr.length).toInt
   val selfPos = Position(sideLength / 2, sideLength / 2)
@@ -29,6 +43,20 @@ case class View(val viewStr:String) {
    */
 
   val indexedViewStr = viewStr.view.zipWithIndex
+
+  def dumpView = {
+    val rows = indexedViewStr.grouped(sideLength)
+
+    rows.foreach { row => 
+      val str = row.foldLeft(""){ case (acc, (c, i)) => acc + c}
+      println(str)
+    }
+  }
+
+  def verifySelfPos = {
+
+  }
+
 
   // where to go to get food
   // very dumb
@@ -44,9 +72,24 @@ case class View(val viewStr:String) {
     Direction(1,1)
   }
 
-  def randomDirection = Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
+  def randomDirection = {
+    Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
+  }
 
-  def foodDirection = randomDirection
+  def isDirectionSafe(dir:Direction):Boolean = {
+    val newPos = selfPos.add(Position(dir.x, dir.y), sideLength)
+    val idx = newPos.toIndex(sideLength)
+  }
+
+  lazy val PossibleMoves = for {
+    x <- Seq(-1,0,1)
+    y <- Seq(-1,0,1)
+  } yield Position(x,y)
+
+  def foodDirection = {
+    
+    randomDirection
+  }
 
   // don't go there??
   def dangerDirection = {
@@ -64,12 +107,15 @@ case class View(val viewStr:String) {
 //case class StateValue, 
 //Set(key=value,...)
 
-trait BotUtils {
+trait Config {
+  val debug = true
+  val chatty = true
+}
+
+trait BotUtils extends Config {
 
   type inputMap = Map[String, String]
 
-  val debug = false
-  val chatty = true
 
   def log(str:String) = "Log(text=" + str + ")"
   def move(x:Int, y:Int):String = "Move(direction=" + x + ":" + y + ")"
@@ -181,7 +227,11 @@ class Bot extends BotUtils {
 
   override def react(m:inputMap, v:View) = {
       //println("React " + {m get viewKey})
-      if (debug) println("Bot react")
+      if (debug) {
+        //println("Bot react")
+        v.dumpView
+      }
+      
       move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
   }
 
