@@ -113,6 +113,7 @@ case class View(val viewStr:String) extends Config {
     }
   }
 
+
   def enemyDirection:Direction = {
     Direction(1,1)
   }
@@ -122,7 +123,9 @@ case class View(val viewStr:String) extends Config {
   }
 
 
-  def isFood(c:Char) = c == 'P' || c == 'B'
+  lazy val foodSet = Set('P', 'B')
+
+  def isFood(c:Char) = foodSet contains c
   def isSafe(c:Char) = (c.isUpperCase || c == '_') && c != 'W'
 
 
