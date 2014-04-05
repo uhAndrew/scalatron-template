@@ -11,9 +11,9 @@ case class Direction(val x:Int, val y:Int) {
 case class Position(val x:Int, val y:Int) {
   override def toString = "position=" + x + ":" + y
 
-  def add(pos:Position, sideLength: Int):Position = {
-    var newx = x + pos.x
-    var newy = y + pos.y
+  def add(dir:Direction, sideLength: Int):Position = {
+    var newx = x + dir.x
+    var newy = y + dir.y
 
     if (newx >= sideLength) {
       newx = newx % sideLength
@@ -62,7 +62,7 @@ case class View(val viewStr:String) extends Config {
   // very dumb
   def foodDirection2:Direction = {
     val allFoodCells = indexedViewStr.filter {
-      case (c, idx) => c == 'P' || c == 'B'
+      case (c, idx) => isFood(c)
     }
 
     val blah = allFoodCells.sortBy {
@@ -76,20 +76,43 @@ case class View(val viewStr:String) extends Config {
     Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
   }
 
-  def isDirectionSafe(dir:Direction):Boolean = {
-    val newPos = selfPos.add(Position(dir.x, dir.y), sideLength)
-    val idx = newPos.toIndex(sideLength)
+
+  def isFood(c:Char) = c == 'P' || c == 'B'
+  def isSafe(c:Char) = (c.isUpperCase || c == '_') && c != 'W'
+
+
+  def isPositionSafe(pos:Position):Boolean = {
+    val idx = pos.toIndex(sideLength)
+    //println("ispossafe: " + idx + " " + viewStr(idx))
+    isSafe(viewStr(idx))
   }
 
-  lazy val PossibleMoves = for {
+  def isDirectionSafe(dir:Direction):Boolean = {
+    val newPos = selfPos.add(dir, sideLength)
+    isPositionSafe(newPos)
+  }
+
+  lazy val possibleMoves = for {
     x <- Seq(-1,0,1)
     y <- Seq(-1,0,1)
-  } yield Position(x,y)
+  } yield Direction(x,y)
 
-  def foodDirection = {
-    
-    randomDirection
+  def safeDirections = {
+    val newPositions = possibleMoves map { d => selfPos.add(d, sideLength) }
+    val safePositions = newPositions filter { p => isPositionSafe(p) }
+    println("safepos")
+    println(safePositions)
+
+    /*
+    safePositions map { p => 
+      println(p) 
+      println(viewStr(p.toIndex(sideLength)))
+    }
+    */
+
   }
+
+  def foodDirection = randomDirection
 
   // don't go there??
   def dangerDirection = {
@@ -230,6 +253,7 @@ class Bot extends BotUtils {
       if (debug) {
         //println("Bot react")
         v.dumpView
+        v.safeDirections
       }
       
       move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
