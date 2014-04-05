@@ -95,9 +95,10 @@ case class View(val viewStr:String) extends Config {
       case (c, idx) => {idx - viewStr.length/2}.abs
     }
 
-    if (blah.length > 0) {
-      val best = blah.head
-      val ret = directionTowardIndex(best._2)
+    val safeDirectionsTowardFood = blah map { b => directionTowardIndex(b._2) } filter { d => isDirectionSafe(d) }
+
+    if (safeDirectionsTowardFood.length > 0) {
+      val ret = safeDirectionsTowardFood.head
       println("going for food " + ret)
       ret
     } else {
