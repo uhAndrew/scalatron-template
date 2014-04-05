@@ -116,7 +116,7 @@ case class View(val viewStr:String) extends Config {
   def foodDirection = directionToward(foodSet)
   def enemyBotDirection = directionToward(enemyBot)
   def enemyCreatureDirection = directionToward(enemyCreature)
-
+  def masterDirection = directionToward(master)
 
   def directionToward(charSet:Set[Char]):Direction = {
     val cells = indexedViewStr.filter {
@@ -158,6 +158,7 @@ case class View(val viewStr:String) extends Config {
   lazy val enemyBot = otherBot ++ otherSlave
   lazy val enemyCreature = otherBot ++ Set('b')
   lazy val badCell = enemyBot ++ badCreature ++ Set('W')
+  lazy val master = Set('M')
 
   def isFood(c:Char) = foodSet contains c
   def isBad(c:Char) = badCell contains c
@@ -215,7 +216,7 @@ trait BotUtils extends Config {
   val spawnDelayKey = "spawndelay"
 
   def energySpawnMin = 200
-  def spawnDelayTicks = 7
+  def spawnDelayTicks = 2
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
 
@@ -283,7 +284,6 @@ class Bot extends BotUtils {
 
     spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
     energy > energySpawnMin && spawndelay == 0
-    false
   }
 
   def maybeSpawn(m:inputMap, v:View):String = {
@@ -316,7 +316,7 @@ class Bot extends BotUtils {
       //println("React " + {m get viewKey})
       if (debug) {
         //println("Bot react")
-        v.dumpView
+        //v.dumpView
         //println(v.safeDirections)
       }
       
@@ -337,10 +337,16 @@ class Bot extends BotUtils {
 }
 
 object SlaveBot extends BotUtils {
-  def explodeEnergy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
+  def energy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
+  def explodeEnergy(m:inputMap) = energy(m)
+
+  val returnEnergyThreshold = 1000
+
+  def shouldReturnToMaster(m:inputMap) = energy(m) >= returnEnergyThreshold
 
   def nearOtherBot(m:inputMap, v:View) = {
     Random.nextInt(100) < 50
+    false
   }
 
   def maybeExplode(m:inputMap, v:View) = {
@@ -353,7 +359,24 @@ object SlaveBot extends BotUtils {
   }
 
   override def react(m:inputMap, v:View) = {
-    move(v.enemyBotDirection) + maybeExplode(m, v)
+    if (debug) {
+      //v.dumpView
+      //println(m)
+    }
+    //move(v.enemyBotDirection) + maybeExplode(m, v)
+
+    if (shouldReturnToMaster(m)) {
+      move(v.masterDirection)
+    } else {
+      move(v.foodDirection) + maybeExplode(m, v)
+    }
+
+  }
+}
+
+object MissileSlaveBot extends BotUtils {
+  override def react(m:inputMap, v:View) = {
+    move(Direction(0,0))
   }
 }
 
