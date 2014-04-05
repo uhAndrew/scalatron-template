@@ -124,10 +124,14 @@ case class View(val viewStr:String) extends Config {
 
 
   lazy val foodSet = Set('P', 'B')
+  lazy val otherBot = Set('m')
+  lazy val otherSlave = Set('s')
+  lazy val badCreature = Set('p', 'b')
+  lazy val badCell = otherBot ++ otherSlave ++ badCreature ++ Set('W')
 
   def isFood(c:Char) = foodSet contains c
-  def isSafe(c:Char) = (c.isUpperCase || c == '_') && c != 'W'
-
+  def isBad(c:Char) = badCell contains c
+  def isSafe(c:Char) = !isBad(c)
 
   def isPositionSafe(pos:Position):Boolean = {
     val idx = pos.toIndex(sideLength)
