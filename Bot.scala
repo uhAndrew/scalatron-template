@@ -23,7 +23,19 @@ case class Position(val x:Int, val y:Int) {
     Position(newx, newy)
   }
 
-  def toIndex(sideLength:Int) = x * sideLength + y
+  def toIndex(sideLength:Int) = y * sideLength + x
+}
+
+object Position {
+  /*
+   *
+   * e.g. 5x5 grid
+   *     0 1 2 3 4
+   *     5 6 7 8 9
+   *     ...
+   *
+   */
+  def fromIndex(idx:Int, sideLength:Int) = Position(idx % sideLength, idx / sideLength)
 }
 
 case class BotProperty(val k:String, val v: String) {
@@ -57,18 +69,50 @@ case class View(val viewStr:String) extends Config {
 
   }
 
+  // takes an index and gives you a direction that
+  // will get you closer to that index
+  def directionTowardIndex(idx:Int):Direction = {
+    val pos = Position.fromIndex(idx, sideLength)
+    var x = pos.x - selfPos.x
+    var y = pos.y - selfPos.y
+
+    // normalize
+    if (x.abs > 0) x = x/x.abs
+    if (y.abs > 0) y = y/y.abs
+
+    Direction(x, y)
+  }
 
   // where to go to get food
   // very dumb
-  def foodDirection2:Direction = {
+  def foodDirection:Direction = {
     val allFoodCells = indexedViewStr.filter {
       case (c, idx) => isFood(c)
     }
 
     val blah = allFoodCells.sortBy {
+      // viewStr.length/2 is our position, right in the middle?
       case (c, idx) => {idx - viewStr.length/2}.abs
     }
 
+    if (blah.length > 0) {
+      val best = blah.head
+      val ret = directionTowardIndex(best._2)
+      println("going for food " + ret)
+      ret
+    } else {
+      val safe = safeDirections
+      if (safe.length > 0) {
+        println("going for safe " + safe.head)
+        safe.head
+      } else {
+        println("staying put")
+        Direction(0,0)
+      }
+    }
+  }
+
+  def enemyDirection:Direction = {
     Direction(1,1)
   }
 
@@ -83,7 +127,7 @@ case class View(val viewStr:String) extends Config {
 
   def isPositionSafe(pos:Position):Boolean = {
     val idx = pos.toIndex(sideLength)
-    //println("ispossafe: " + idx + " " + viewStr(idx))
+    println("ispossafe: " + pos + " " + idx + " " + viewStr(idx))
     isSafe(viewStr(idx))
   }
 
@@ -97,22 +141,10 @@ case class View(val viewStr:String) extends Config {
     y <- Seq(-1,0,1)
   } yield Direction(x,y)
 
-  def safeDirections = {
-    val newPositions = possibleMoves map { d => selfPos.add(d, sideLength) }
-    val safePositions = newPositions filter { p => isPositionSafe(p) }
-    println("safepos")
-    println(safePositions)
-
-    /*
-    safePositions map { p => 
-      println(p) 
-      println(viewStr(p.toIndex(sideLength)))
-    }
-    */
-
+  def safeDirections = possibleMoves filter { d =>
+    val newpos = selfPos.add(d, sideLength)
+    isPositionSafe(newpos)
   }
-
-  def foodDirection = randomDirection
 
   // don't go there??
   def dangerDirection = {
@@ -253,7 +285,7 @@ class Bot extends BotUtils {
       if (debug) {
         //println("Bot react")
         v.dumpView
-        v.safeDirections
+        //println(v.safeDirections)
       }
       
       move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
