@@ -105,7 +105,7 @@ case class View(val viewStr:String) extends Config {
       val safe = safeDirections
       if (safe.length > 0) {
         println("going for safe " + safe.head)
-        safe.head
+        Random.shuffle(safe).head
       } else {
         println("staying put")
         Direction(0,0)
@@ -253,6 +253,7 @@ class Bot extends BotUtils {
 
     spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
     energy > energySpawnMin && spawndelay == 0
+    false
   }
 
   def maybeSpawn(m:inputMap, v:View):String = {
