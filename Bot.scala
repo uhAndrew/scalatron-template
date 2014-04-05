@@ -85,7 +85,7 @@ case class View(val viewStr:String) extends Config {
 
   // where to go to get food
   // very dumb
-  def foodDirection:Direction = {
+  def foodDirectionOld:Direction = {
     val allFoodCells = indexedViewStr.filter {
       case (c, idx) => isFood(c)
     }
@@ -113,21 +113,51 @@ case class View(val viewStr:String) extends Config {
     }
   }
 
+  def foodDirection = directionToward(foodSet)
+  def enemyBotDirection = directionToward(enemyBot)
+  def enemyCreatureDirection = directionToward(enemyCreature)
 
-  def enemyDirection:Direction = {
-    Direction(1,1)
+
+  def directionToward(charSet:Set[Char]):Direction = {
+    val cells = indexedViewStr.filter {
+      case (c, idx) => charSet contains c
+    }
+
+    // go to the closest
+    val blah = cells.sortBy {
+      // viewStr.length/2 is our position, right in the middle?
+      case (c, idx) => {idx - viewStr.length/2}.abs
+    }
+
+    val safeDirectionsToward = blah map { b => directionTowardIndex(b._2) } filter { d => isDirectionSafe(d) }
+
+    if (safeDirectionsToward.length > 0) {
+      val ret = safeDirectionsToward.head
+      //println("going for it " + ret)
+      ret
+    } else {
+      val safe = safeDirections
+      if (safe.length > 0) {
+        //println("going for safe " + safe.head)
+        Random.shuffle(safe).head
+      } else {
+        //println("staying put")
+        Direction(0,0)
+      }
+    }
   }
 
   def randomDirection = {
     Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
   }
 
-
   lazy val foodSet = Set('P', 'B')
   lazy val otherBot = Set('m')
   lazy val otherSlave = Set('s')
   lazy val badCreature = Set('p', 'b')
-  lazy val badCell = otherBot ++ otherSlave ++ badCreature ++ Set('W')
+  lazy val enemyBot = otherBot ++ otherSlave
+  lazy val enemyCreature = otherBot ++ Set('b')
+  lazy val badCell = enemyBot ++ badCreature ++ Set('W')
 
   def isFood(c:Char) = foodSet contains c
   def isBad(c:Char) = badCell contains c
@@ -135,7 +165,7 @@ case class View(val viewStr:String) extends Config {
 
   def isPositionSafe(pos:Position):Boolean = {
     val idx = pos.toIndex(sideLength)
-    println("ispossafe: " + pos + " " + idx + " " + viewStr(idx))
+    //println("ispossafe: " + pos + " " + idx + " " + viewStr(idx))
     isSafe(viewStr(idx))
   }
 
@@ -158,13 +188,6 @@ case class View(val viewStr:String) extends Config {
   def dangerDirection = {
     Direction(0,0)
   }
-
-  def otherBotDirection:Direction = randomDirection
-
-  def safeDirection(d:Direction) = {
-    Direction(0,0)
-  }
-
 }
 
 //case class StateValue, 
@@ -269,7 +292,7 @@ class Bot extends BotUtils {
     }
     if (canSpawn(m)) {
       if (debug) println("canSpawn=yes")
-      prependBar(spawn(v.otherBotDirection)) + prependBar(spawnDelay)
+      prependBar(spawn(v.enemyBotDirection)) + prependBar(spawnDelay)
     } else {
       prependBar(decSpawnDelay(m))
     }
@@ -330,7 +353,7 @@ object SlaveBot extends BotUtils {
   }
 
   override def react(m:inputMap, v:View) = {
-    move(v.otherBotDirection) + maybeExplode(m, v)
+    move(v.enemyBotDirection) + maybeExplode(m, v)
   }
 }
 
