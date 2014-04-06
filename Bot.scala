@@ -208,7 +208,10 @@ case class View(val viewStr:String) extends Config {
   lazy val otherSlave = Set('s')
   lazy val badCreature = Set('p', 'b')
   lazy val enemyBot = otherBot ++ otherSlave
+
+  //lazy val enemyCreature = otherBot ++ Set('b')
   lazy val enemyCreature = otherBot ++ Set('b')
+
   lazy val danger = enemyBot ++ Set('b')
   lazy val badCell = enemyBot ++ badCreature ++ Set('W')
   lazy val master = Set('M')
@@ -268,21 +271,21 @@ trait BotUtils extends Config {
   val generationKey = "generation"
   val viewKey = "view"
   val energyKey = "energy"
-  val botTypeKey = "name"
+  val botTypeKey = "botType"
   val spawnDelayKey = "spawndelay"
   val returnEnergyKey = "returnEnergyAmount"
   val assassinOptionKey = "assissinOption"
 
   def energySpawnMin = 200
   def assassinOptionMin = 1000
-  def spawnAssassin = Random.nextInt(100) < 6
+  def spawnAssassin = Random.nextInt(100) < 15
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
   val explodeRadius = 6
 
-  def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
-  def spawn(dir:Direction, name:String) = "Spawn(" + dir.toString + ",name=" + name + ")"
-  def spawn(dir:Direction, name:String, extra:String) = "Spawn(" + dir.toString + ",name=" + name + "," + extra + ")"
+  def spawn(dir:Direction, botType:String, energy:Int) = "Spawn(" + dir.toString + ",botType=" + botType + ",energy=" + energy + ")"
+  def spawn(dir:Direction, botType:String) = "Spawn(" + dir.toString + ",botType=" + botType + ")"
+  def spawn(dir:Direction, botType:String, extra:String) = "Spawn(" + dir.toString + ",botType=" + botType + "," + extra + ")"
   def spawn(dir:Direction) = "Spawn(" + dir.toString + ")"
 
   // haha abusing Set.toString to get Set(....)
@@ -431,7 +434,9 @@ case class SlaveBot() extends BotUtils {
 
   var botType = "slave"
   def identity(m:inputMap) = prependBar(setKV(Set(BotProperty(botTypeKey, botType), 
-                                         BotProperty(returnEnergyKey, getReturnEnergyThreshold(m)))))
+                                         BotProperty(returnEnergyKey, getReturnEnergyThreshold(m)),
+                                         BotProperty(assassinOptionKey, getAssassinOption(m))
+                                         )))
 
   override def react(m:inputMap, v:View) = {
     if (debug) {
@@ -472,6 +477,7 @@ case class MissileBot() extends SlaveBot {
 
   def maybeExplode(m:inputMap, v:View) = {
     if (v.nearEnemyCreature) {
+      println("exploding")
       prependBar(explode(explodeRadius))
     } else {
       ""
