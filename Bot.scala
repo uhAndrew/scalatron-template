@@ -124,16 +124,19 @@ case class View(val viewStr:String) extends Config {
   def foodDirection = directionToward(foodSet)
   def enemyBotDirection = directionToward(enemyBot)
   def enemyCreatureDirection = directionToward(enemyCreature)
-  //def masterDirection = directionToward(master) 
-  def masterDirection = if (nearDanger) fleeDirection else directionToward(master)
+  def masterDirection = directionToward(master) 
+  //def masterDirection = if (nearDanger) fleeDirection else directionToward(master)
   def fleeDirection = directionAway(badCell)
 
   def optionDirection = {
+    /*
     if (nearDanger) {
       fleeDirection
     } else {
       foodDirection
     }
+    */
+   foodDirection
   }
 
   def directionToward(charSet:Set[Char]):Direction = {
@@ -176,7 +179,7 @@ case class View(val viewStr:String) extends Config {
       case (c, idx) => 
         //{idx - viewStr.length/2}.abs
           val pos = Position.fromIndex(idx, sideLength)
-          selfPos.delta(pos)
+          -selfPos.delta(pos)
     }
 
     val safeDirectionsAway = blah map { b => directionAwayIndex(b._2) } filter { d => isDirectionSafe(d) }
