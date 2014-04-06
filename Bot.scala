@@ -248,7 +248,7 @@ case class View(val viewStr:String) extends Config {
 //Set(key=value,...)
 
 trait Config {
-  val debug = true
+  val debug = false
   val chatty = true
 }
 
@@ -278,7 +278,7 @@ trait BotUtils extends Config {
   def spawnAssassin = Random.nextInt(100) < 6
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
-  val explodeRadius = 8
+  val explodeRadius = 6
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
   def spawn(dir:Direction, name:String) = "Spawn(" + dir.toString + ",name=" + name + ")"
@@ -323,6 +323,9 @@ class Bot extends BotUtils {
 
     inputmap match {
       case ("Welcome", _) => 
+        ""
+
+      case ("Goodbye", _) =>
         ""
 
       case ("React", m:inputMap) => 
