@@ -153,15 +153,12 @@ case class View(val viewStr:String) extends Config {
 
     if (safeDirectionsToward.length > 0) {
       val ret = safeDirectionsToward.head
-      //println("going for it " + ret)
       ret
     } else {
       val safe = safeDirections
       if (safe.length > 0) {
-        //println("going for safe " + safe.head)
         Random.shuffle(safe).head
       } else {
-        //println("staying put")
         Direction(0,0)
       }
     }
@@ -185,15 +182,12 @@ case class View(val viewStr:String) extends Config {
 
     if (safeDirectionsAway.length > 0) {
       val ret = safeDirectionsAway.head
-      //println("going for it " + ret)
       ret
     } else {
       val safe = safeDirections
       if (safe.length > 0) {
-        //println("going for safe " + safe.head)
         Random.shuffle(safe).head
       } else {
-        //println("staying put")
         Direction(0,0)
       }
     }
@@ -222,7 +216,6 @@ case class View(val viewStr:String) extends Config {
 
   def isPositionSafe(pos:Position):Boolean = {
     val idx = pos.toIndex(sideLength)
-    //println("ispossafe: " + pos + " " + idx + " " + viewStr(idx))
     isSafe(viewStr(idx))
   }
 
@@ -239,11 +232,6 @@ case class View(val viewStr:String) extends Config {
   def safeDirections = possibleMoves filter { d =>
     val newpos = selfPos.add(d, sideLength)
     isPositionSafe(newpos)
-  }
-
-  // don't go there??
-  def dangerDirection = {
-    Direction(0,0)
   }
 }
 
@@ -321,9 +309,6 @@ class Bot extends BotUtils {
     //"Status(text=Hello World)"
     val inputmap = CommandParser(input)
 
-    //println("map=" + inputmap)
-    //log(CommandParser(input).toString)
-
     inputmap match {
       case ("Welcome", _) => 
         ""
@@ -347,8 +332,8 @@ class Bot extends BotUtils {
     val energy = m.getOrElse(energyKey, "0").toInt
     val spawndelay = m.getOrElse(spawnDelayKey, "0").toInt
 
-    if (debug) {
-      //println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
+    if (false && debug) {
+      println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
     }
 
     spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
@@ -373,11 +358,7 @@ class Bot extends BotUtils {
   }
 
   def maybeSpawn(m:inputMap, v:View):String = {
-    if (debug) {
-      //println("in maybeSpawn")
-    }
     if (canSpawn(m)) {
-      //if (debug) println("canSpawn=yes")
       val extra = maybeAssassin(m,v)
       maybeLaunch(m, v) + prependBar(spawn(v.foodDirection, "slave", extra)) + prependBar(spawnDelay)
     } else {
@@ -400,14 +381,12 @@ class Bot extends BotUtils {
   }
 
   override def react(m:inputMap, v:View) = {
-      //println("React " + {m get viewKey})
       if (debug) {
         //println("Bot react")
         //v.dumpView
         //println(v.safeDirections)
       }
       
-      //move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
       move(v.optionDirection) + maybeSpawn(m, v) + energyStatus(m)
   }
 
@@ -443,7 +422,6 @@ case class SlaveBot() extends BotUtils {
       //v.dumpView
       //println(m)
     }
-    //move(v.enemyBotDirection) + maybeExplode(m, v)
 
     // gah this is set twice the first time... once here and once when identity is set the first time
     val returnEnergyThreshold = getReturnEnergyThreshold(m).toInt
@@ -477,7 +455,6 @@ case class MissileBot() extends SlaveBot {
 
   def maybeExplode(m:inputMap, v:View) = {
     if (v.nearEnemyCreature) {
-      println("exploding")
       prependBar(explode(explodeRadius))
     } else {
       ""
