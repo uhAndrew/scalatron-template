@@ -346,7 +346,8 @@ class Bot extends BotUtils {
 
   def maybeLaunch(m:inputMap, v:View):String = {
     if (v.nearDanger) {
-      prependBar(spawn(v.enemyCreatureDirection, "missile"))
+      val extra = nearnessKey + "=8," + explodeRadiusKey + "=10"
+      prependBar(spawn(v.enemyCreatureDirection, "missile", extra))
     } else {
       ""
     }
@@ -363,8 +364,17 @@ class Bot extends BotUtils {
 
   def maybeSpawn(m:inputMap, v:View):String = {
     if (canSpawn(m)) {
-      val extra = maybeAssassin(m,v)
-      maybeLaunch(m, v) + prependBar(spawn(v.foodDirection, "slave", extra)) + prependBar(spawnDelay)
+      val launch = maybeLaunch(m,v)
+
+      val spawnString = if (launch.isEmpty) {
+        val extra = maybeAssassin(m,v)
+        prependBar(spawn(v.foodDirection, "slave", extra))
+      } else {
+        launch
+      }
+
+      spawnString + prependBar(spawnDelay)
+
     } else {
       prependBar(decSpawnDelay(m))
     }
@@ -376,7 +386,7 @@ class Bot extends BotUtils {
       chatty match {
         case true => 
           if (energy < 0) 
-            prependBar(status("uh_oh")) 
+            prependBar(status("uh oh")) 
           else 
             prependBar(status("yay"))
 
@@ -435,6 +445,7 @@ case class SlaveBot() extends BotUtils {
       if (getAssassinOption(m) == "yes") {
         if (debug) println("assassin becoming missile")
         botType = "missile"
+        // TODO: get explodeRadius/nearness pair
         move(v.enemyBotDirection) + identity(m)
       } else {
         move(v.masterDirection) + identity(m)
@@ -473,33 +484,14 @@ case class MissileBot() extends SlaveBot {
       //v.dumpView
       //println(m)
     }
+    val ret = 
     move(v.enemyCreatureDirection) + maybeExplode(m, v) + identity(m)
+    println(ret)
+    ret
   }
 
 }
 
-
-case class DefensiveMissileBot() extends SlaveBot {
-
-  botType = "dmissile"
-
-  def maybeExplode(m:inputMap, v:View) = {
-    if (v.nearEnemyCreature(1)) {
-      prependBar(explode(explodeRadius))
-    } else {
-      ""
-    }
-  }
-
-  override def react(m:inputMap, v:View) = {
-    if (debug) {
-      //v.dumpView
-      //println(m)
-    }
-    move(v.enemyCreatureDirection) + maybeExplode(m, v) + identity(m)
-  }
-
-}
 
 /** Utility methods for parsing strings containing a single command of the format
   * "Command(key=value,key=value,...)"
