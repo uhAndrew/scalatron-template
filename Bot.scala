@@ -204,6 +204,7 @@ case class View(val viewStr:String) extends Config {
   lazy val enemyBot = otherBot ++ otherSlave
 
   //lazy val enemyCreature = otherBot ++ Set('b')
+  //lazy val enemyCreature = otherBot ++ otherSlave ++ Set('b')
   lazy val enemyCreature = otherBot ++ Set('b')
 
   lazy val danger = enemyBot ++ Set('b')
@@ -266,7 +267,7 @@ trait BotUtils extends Config {
 
   def energySpawnMin = 200
   def assassinOptionMin = 500
-  def spawnAssassin = Random.nextInt(100) < 15
+  def spawnAssassin = Random.nextInt(100) < 30
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
   val explodeRadius = 6
