@@ -95,7 +95,7 @@ case class View(val viewStr:String) extends Config {
   }
 
   def nearOtherBot = nearCharSet(enemyBot, 4)
-  def nearEnemyCreature = nearCharSet(enemyCreature, 1)
+  def nearEnemyCreature(nearness:Int) = nearCharSet(enemyCreature, nearness)
   def nearDanger = nearCharSet(danger, 8)
 
   def nearCharSet(charSet:Set[Char], threshold:Int):Boolean = {
@@ -264,6 +264,8 @@ trait BotUtils extends Config {
   val spawnDelayKey = "spawndelay"
   val returnEnergyKey = "returnEnergyAmount"
   val assassinOptionKey = "assissinOption"
+  val explodeRadiusKey = "explodeRadius"
+  def nearnessKey = "nearnessFactor"
 
   def energySpawnMin = 200
   def assassinOptionMin = 500
@@ -271,6 +273,7 @@ trait BotUtils extends Config {
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
   val explodeRadius = 6
+  val nearnessFactor = 1
 
   def spawn(dir:Direction, botType:String, energy:Int) = "Spawn(" + dir.toString + ",botType=" + botType + ",energy=" + energy + ")"
   def spawn(dir:Direction, botType:String) = "Spawn(" + dir.toString + ",botType=" + botType + ")"
@@ -450,12 +453,38 @@ case class SlaveBot() extends BotUtils {
 
 case class MissileBot() extends SlaveBot {
 
-  def explodeEnergy(m:inputMap) = energy(m)
-  
   botType = "missile"
 
+  def getExplodeRadius(m:inputMap) = m.getOrElse(explodeRadiusKey, explodeRadius.toString)
+  def getNearnessFactor(m:inputMap) = m.getOrElse(nearnessKey, nearnessFactor.toString)
+  override def identity(m:inputMap) = super.identity(m) + prependBar(setKV(Set(BotProperty(explodeRadiusKey, getExplodeRadius(m)),
+    BotProperty(nearnessKey, getNearnessFactor(m)))))
+
   def maybeExplode(m:inputMap, v:View) = {
-    if (v.nearEnemyCreature) {
+    if (v.nearEnemyCreature(getNearnessFactor(m).toInt)) {
+      prependBar(explode(getExplodeRadius(m).toInt))
+    } else {
+      ""
+    }
+  }
+
+  override def react(m:inputMap, v:View) = {
+    if (debug) {
+      //v.dumpView
+      //println(m)
+    }
+    move(v.enemyCreatureDirection) + maybeExplode(m, v) + identity(m)
+  }
+
+}
+
+
+case class DefensiveMissileBot() extends SlaveBot {
+
+  botType = "dmissile"
+
+  def maybeExplode(m:inputMap, v:View) = {
+    if (v.nearEnemyCreature(1)) {
       prependBar(explode(explodeRadius))
     } else {
       ""
