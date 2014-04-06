@@ -96,7 +96,7 @@ case class View(val viewStr:String) extends Config {
 
   def nearOtherBot = nearCharSet(enemyBot, 4)
   def nearEnemyCreature(nearness:Int) = nearCharSet(enemyCreature, nearness)
-  def nearDanger = nearCharSet(danger, 8)
+  def nearDanger = nearCharSet(danger, 3)
 
   def nearCharSet(charSet:Set[Char], threshold:Int):Boolean = {
 
@@ -124,7 +124,8 @@ case class View(val viewStr:String) extends Config {
   def foodDirection = directionToward(foodSet)
   def enemyBotDirection = directionToward(enemyBot)
   def enemyCreatureDirection = directionToward(enemyCreature)
-  def masterDirection = directionToward(master)
+  //def masterDirection = directionToward(master) 
+  def masterDirection = if (nearDanger) fleeDirection else directionToward(master)
   def fleeDirection = directionAway(badCell)
 
   def optionDirection = {
@@ -420,7 +421,7 @@ class Bot extends BotUtils {
 
 }
 
-case class SlaveBot() extends BotUtils {
+case class SlaveBot() extends Bot {
   def energy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
   def getReturnEnergyThreshold(m:inputMap) = m.getOrElse(returnEnergyKey, createReturnEnergyThreshold)
   def getAssassinOption(m:inputMap) = m.getOrElse(assassinOptionKey, "no")
@@ -451,7 +452,7 @@ case class SlaveBot() extends BotUtils {
         move(v.masterDirection) + identity(m)
       }
     } else {
-      move(v.foodDirection) + identity(m)
+      move(v.optionDirection) + identity(m)
     }
 
     if (debug) {
@@ -484,10 +485,7 @@ case class MissileBot() extends SlaveBot {
       //v.dumpView
       //println(m)
     }
-    val ret = 
     move(v.enemyCreatureDirection) + maybeExplode(m, v) + identity(m)
-    println(ret)
-    ret
   }
 
 }
