@@ -277,7 +277,7 @@ trait BotUtils extends Config {
   val assassinOptionKey = "assissinOption"
 
   def energySpawnMin = 200
-  def assassinOptionMin = 1000
+  def assassinOptionMin = 500
   def spawnAssassin = Random.nextInt(100) < 15
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
