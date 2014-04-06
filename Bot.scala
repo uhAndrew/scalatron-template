@@ -89,8 +89,13 @@ case class View(val viewStr:String) extends Config {
     Direction(x, y)
   }
 
+  def directionAwayIndex(idx:Int):Direction = {
+    val dir = directionTowardIndex(idx)
+    Direction(-dir.x, -dir.y)
+  }
 
   def nearOtherBot = nearCharSet(enemyBot, 4)
+  def nearDanger = nearCharSet(danger, 8)
 
   def nearCharSet(charSet:Set[Char], threshold:Int):Boolean = {
 
@@ -119,6 +124,15 @@ case class View(val viewStr:String) extends Config {
   def enemyBotDirection = directionToward(enemyBot)
   def enemyCreatureDirection = directionToward(enemyCreature)
   def masterDirection = directionToward(master)
+  def fleeDirection = directionAway(badCell)
+
+  def optionDirection = {
+    if (nearDanger) {
+      fleeDirection
+    } else {
+      foodDirection
+    }
+  }
 
   def directionToward(charSet:Set[Char]):Direction = {
     val cells = indexedViewStr.filter {
@@ -152,6 +166,38 @@ case class View(val viewStr:String) extends Config {
     }
   }
 
+  def directionAway(charSet:Set[Char]):Direction = {
+    val cells = indexedViewStr.filter {
+      case (c, idx) => charSet contains c
+    }
+
+    // find the one that's closest
+    val blah = cells.sortBy {
+      // viewStr.length/2 is our position, right in the middle?
+      case (c, idx) => 
+        //{idx - viewStr.length/2}.abs
+          val pos = Position.fromIndex(idx, sideLength)
+          selfPos.delta(pos)
+    }
+
+    val safeDirectionsAway = blah map { b => directionAwayIndex(b._2) } filter { d => isDirectionSafe(d) }
+
+    if (safeDirectionsAway.length > 0) {
+      val ret = safeDirectionsAway.head
+      //println("going for it " + ret)
+      ret
+    } else {
+      val safe = safeDirections
+      if (safe.length > 0) {
+        //println("going for safe " + safe.head)
+        Random.shuffle(safe).head
+      } else {
+        //println("staying put")
+        Direction(0,0)
+      }
+    }
+  }
+
   def randomDirection = {
     Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
   }
@@ -162,6 +208,7 @@ case class View(val viewStr:String) extends Config {
   lazy val badCreature = Set('p', 'b')
   lazy val enemyBot = otherBot ++ otherSlave
   lazy val enemyCreature = otherBot ++ Set('b')
+  lazy val danger = enemyBot ++ Set('b')
   lazy val badCell = enemyBot ++ badCreature ++ Set('W')
   lazy val master = Set('M')
 
@@ -328,7 +375,8 @@ class Bot extends BotUtils {
         //println(v.safeDirections)
       }
       
-      move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
+      //move(v.foodDirection) + maybeSpawn(m, v) + energyStatus(m)
+      move(v.optionDirection) + maybeSpawn(m, v) + energyStatus(m)
   }
 
   def dispatchReact(m:inputMap) = {
