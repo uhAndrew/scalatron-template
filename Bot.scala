@@ -24,6 +24,13 @@ case class Position(val x:Int, val y:Int) {
   }
 
   def toIndex(sideLength:Int) = y * sideLength + x
+
+  def delta(pos:Position) = {
+    val xDelta = {pos.x - x}.abs
+    val yDelta = {pos.y - y}.abs
+    xDelta + yDelta
+  }
+
 }
 
 object Position {
@@ -66,7 +73,6 @@ case class View(val viewStr:String) extends Config {
   }
 
   def verifySelfPos = {
-
   }
 
   // takes an index and gives you a direction that
@@ -81,6 +87,32 @@ case class View(val viewStr:String) extends Config {
     if (y.abs > 0) y = y/y.abs
 
     Direction(x, y)
+  }
+
+
+  def nearOtherBot = nearCharSet(enemyBot, 4)
+
+  def nearCharSet(charSet:Set[Char], threshold:Int):Boolean = {
+
+    val cells = indexedViewStr.filter {
+      case (c, idx) => charSet contains c
+    }
+
+    if (cells.length == 0) {
+      false
+    } else {
+
+      // go to the closest
+      val closest = cells.sortBy {
+        // viewStr.length/2 is our position, right in the middle?
+        case (c, idx) => 
+          val pos = Position.fromIndex(idx, sideLength)
+          selfPos.delta(pos)
+      }
+
+      val distance = selfPos.delta(Position.fromIndex(closest.head._2, sideLength))
+      distance <= threshold
+    }
   }
 
   // where to go to get food
@@ -210,16 +242,19 @@ trait BotUtils extends Config {
     case Direction(x,y) => move(x,y)
   }
 
+  def returnEnergyThreshold:Int = Random.nextInt(800) + 500
+
   val generationKey = "generation"
   val viewKey = "view"
   val energyKey = "energy"
+  val botTypeKey = "name"
   val spawnDelayKey = "spawndelay"
 
   def energySpawnMin = 200
   def spawnDelayTicks = 2
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
-
+  def spawn(dir:Direction, name:String) = "Spawn(" + dir.toString + ",name=" + name + ")"
   def spawn(dir:Direction) = "Spawn(" + dir.toString + ")"
 
   // haha abusing Set.toString to get Set(....)
@@ -292,7 +327,7 @@ class Bot extends BotUtils {
     }
     if (canSpawn(m)) {
       if (debug) println("canSpawn=yes")
-      prependBar(spawn(v.enemyBotDirection)) + prependBar(spawnDelay)
+      prependBar(spawn(v.enemyBotDirection, "slave")) + prependBar(spawnDelay)
     } else {
       prependBar(decSpawnDelay(m))
     }
@@ -328,7 +363,11 @@ class Bot extends BotUtils {
     val view = View(m(viewKey))
 
     if (generation > 0) {
-      SlaveBot.react(m, view)
+      println(m)
+      m(botTypeKey) match {
+        case "slave" => SlaveBot().react(m, view)
+        case "missile" => MissileBot().react(m, view)
+      }
     } else {
       react(m, view)
     }
@@ -336,22 +375,44 @@ class Bot extends BotUtils {
 
 }
 
-object SlaveBot extends BotUtils {
+case class SlaveBot() extends BotUtils {
   def energy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
-  def explodeEnergy(m:inputMap) = energy(m)
 
-  val returnEnergyThreshold = 1000
+  def botType = "slave"
+  def identity = prependBar(setKV(Set(BotProperty(botTypeKey, botType))))
 
   def shouldReturnToMaster(m:inputMap) = energy(m) >= returnEnergyThreshold
 
-  def nearOtherBot(m:inputMap, v:View) = {
-    Random.nextInt(100) < 50
-    false
+  override def react(m:inputMap, v:View) = {
+    if (debug) {
+      //v.dumpView
+      //println(m)
+    }
+    //move(v.enemyBotDirection) + maybeExplode(m, v)
+
+    val ret = 
+    if (shouldReturnToMaster(m)) {
+      move(v.masterDirection) + identity
+    } else {
+      move(v.foodDirection) + identity
+    }
+
+    if (debug) {
+      println(ret)
+    }
+    ret
   }
 
+}
+
+case class MissileBot() extends SlaveBot {
+
+  def explodeEnergy(m:inputMap) = energy(m)
+  
+  override def botType = "missile"
+
   def maybeExplode(m:inputMap, v:View) = {
-    if (nearOtherBot(m, v)) {
-      if (debug) println("maybeExplode=yes")
+    if (v.nearOtherBot) {
       prependBar(explode(explodeEnergy(m)))
     } else {
       ""
@@ -363,21 +424,9 @@ object SlaveBot extends BotUtils {
       //v.dumpView
       //println(m)
     }
-    //move(v.enemyBotDirection) + maybeExplode(m, v)
-
-    if (shouldReturnToMaster(m)) {
-      move(v.masterDirection)
-    } else {
-      move(v.foodDirection) + maybeExplode(m, v)
-    }
-
+    move(v.enemyBotDirection) + maybeExplode(m, v) + identity
   }
-}
 
-object MissileSlaveBot extends BotUtils {
-  override def react(m:inputMap, v:View) = {
-    move(Direction(0,0))
-  }
 }
 
 /** Utility methods for parsing strings containing a single command of the format
