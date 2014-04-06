@@ -95,6 +95,7 @@ case class View(val viewStr:String) extends Config {
   }
 
   def nearOtherBot = nearCharSet(enemyBot, 4)
+  def nearEnemyCreature = nearCharSet(enemyCreature, 1)
   def nearDanger = nearCharSet(danger, 8)
 
   def nearCharSet(charSet:Set[Char], threshold:Int):Boolean = {
@@ -262,19 +263,26 @@ trait BotUtils extends Config {
     case Direction(x,y) => move(x,y)
   }
 
-  def returnEnergyThreshold:Int = Random.nextInt(800) + 500
+  def createReturnEnergyThreshold:String = {Random.nextInt(750) + 500}.toString
 
   val generationKey = "generation"
   val viewKey = "view"
   val energyKey = "energy"
   val botTypeKey = "name"
   val spawnDelayKey = "spawndelay"
+  val returnEnergyKey = "returnEnergyAmount"
+  val assassinOptionKey = "assissinOption"
 
   def energySpawnMin = 200
-  def spawnDelayTicks = 2
+  def assassinOptionMin = 1000
+  def spawnAssassin = Random.nextInt(100) < 6
+  //def spawnDelayTicks = 2
+  def spawnDelayTicks = 0
+  val explodeRadius = 8
 
   def spawn(dir:Direction, name:String, energy:Int) = "Spawn(" + dir.toString + ",name=" + name + ",energy=" + energy + ")"
   def spawn(dir:Direction, name:String) = "Spawn(" + dir.toString + ",name=" + name + ")"
+  def spawn(dir:Direction, name:String, extra:String) = "Spawn(" + dir.toString + ",name=" + name + "," + extra + ")"
   def spawn(dir:Direction) = "Spawn(" + dir.toString + ")"
 
   // haha abusing Set.toString to get Set(....)
@@ -319,7 +327,7 @@ class Bot extends BotUtils {
 
       case ("React", m:inputMap) => 
         val str = dispatchReact(m)
-        if (debug) println(str)
+        //if (debug) println(str)
         str
 
       case (str, m:inputMap) => 
@@ -334,20 +342,38 @@ class Bot extends BotUtils {
     val spawndelay = m.getOrElse(spawnDelayKey, "0").toInt
 
     if (debug) {
-      println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
+      //println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
     }
 
     spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
     energy > energySpawnMin && spawndelay == 0
   }
 
+  def maybeLaunch(m:inputMap, v:View):String = {
+    if (v.nearDanger) {
+      prependBar(spawn(v.enemyCreatureDirection, "missile"))
+    } else {
+      ""
+    }
+  }
+
+  def maybeAssassin(m:inputMap, v:View):String = {
+      val energy = m.getOrElse(energyKey, "0").toInt
+      if (energy > assassinOptionMin && spawnAssassin) {
+        assassinOptionKey + "=yes"
+      } else {
+        ""
+      }
+  }
+
   def maybeSpawn(m:inputMap, v:View):String = {
     if (debug) {
-      println("in maybeSpawn")
+      //println("in maybeSpawn")
     }
     if (canSpawn(m)) {
-      if (debug) println("canSpawn=yes")
-      prependBar(spawn(v.enemyBotDirection, "slave")) + prependBar(spawnDelay)
+      //if (debug) println("canSpawn=yes")
+      val extra = maybeAssassin(m,v)
+      maybeLaunch(m, v) + prependBar(spawn(v.foodDirection, "slave", extra)) + prependBar(spawnDelay)
     } else {
       prependBar(decSpawnDelay(m))
     }
@@ -384,7 +410,6 @@ class Bot extends BotUtils {
     val view = View(m(viewKey))
 
     if (generation > 0) {
-      println(m)
       m(botTypeKey) match {
         case "slave" => SlaveBot().react(m, view)
         case "missile" => MissileBot().react(m, view)
@@ -398,11 +423,12 @@ class Bot extends BotUtils {
 
 case class SlaveBot() extends BotUtils {
   def energy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
+  def getReturnEnergyThreshold(m:inputMap) = m.getOrElse(returnEnergyKey, createReturnEnergyThreshold)
+  def getAssassinOption(m:inputMap) = m.getOrElse(assassinOptionKey, "no")
 
-  def botType = "slave"
-  def identity = prependBar(setKV(Set(BotProperty(botTypeKey, botType))))
-
-  def shouldReturnToMaster(m:inputMap) = energy(m) >= returnEnergyThreshold
+  var botType = "slave"
+  def identity(m:inputMap) = prependBar(setKV(Set(BotProperty(botTypeKey, botType), 
+                                         BotProperty(returnEnergyKey, getReturnEnergyThreshold(m)))))
 
   override def react(m:inputMap, v:View) = {
     if (debug) {
@@ -411,15 +437,24 @@ case class SlaveBot() extends BotUtils {
     }
     //move(v.enemyBotDirection) + maybeExplode(m, v)
 
+    // gah this is set twice the first time... once here and once when identity is set the first time
+    val returnEnergyThreshold = getReturnEnergyThreshold(m).toInt
+
     val ret = 
-    if (shouldReturnToMaster(m)) {
-      move(v.masterDirection) + identity
+    if (energy(m) > returnEnergyThreshold) {
+      if (getAssassinOption(m) == "yes") {
+        if (debug) println("assassin becoming missile")
+        botType = "missile"
+        move(v.enemyBotDirection) + identity(m)
+      } else {
+        move(v.masterDirection) + identity(m)
+      }
     } else {
-      move(v.foodDirection) + identity
+      move(v.foodDirection) + identity(m)
     }
 
     if (debug) {
-      println(ret)
+      //println(ret)
     }
     ret
   }
@@ -430,11 +465,11 @@ case class MissileBot() extends SlaveBot {
 
   def explodeEnergy(m:inputMap) = energy(m)
   
-  override def botType = "missile"
+  botType = "missile"
 
   def maybeExplode(m:inputMap, v:View) = {
-    if (v.nearOtherBot) {
-      prependBar(explode(explodeEnergy(m)))
+    if (v.nearEnemyCreature) {
+      prependBar(explode(explodeRadius))
     } else {
       ""
     }
@@ -445,7 +480,7 @@ case class MissileBot() extends SlaveBot {
       //v.dumpView
       //println(m)
     }
-    move(v.enemyBotDirection) + maybeExplode(m, v) + identity
+    move(v.enemyCreatureDirection) + maybeExplode(m, v) + identity(m)
   }
 
 }
