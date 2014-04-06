@@ -128,7 +128,10 @@ case class View(val viewStr:String) extends Config {
     // go to the closest
     val blah = cells.sortBy {
       // viewStr.length/2 is our position, right in the middle?
-      case (c, idx) => {idx - viewStr.length/2}.abs
+      case (c, idx) => 
+        //{idx - viewStr.length/2}.abs
+          val pos = Position.fromIndex(idx, sideLength)
+          selfPos.delta(pos)
     }
 
     val safeDirectionsToward = blah map { b => directionTowardIndex(b._2) } filter { d => isDirectionSafe(d) }
