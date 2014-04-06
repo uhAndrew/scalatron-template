@@ -115,36 +115,6 @@ case class View(val viewStr:String) extends Config {
     }
   }
 
-  // where to go to get food
-  // very dumb
-  def foodDirectionOld:Direction = {
-    val allFoodCells = indexedViewStr.filter {
-      case (c, idx) => isFood(c)
-    }
-
-    val blah = allFoodCells.sortBy {
-      // viewStr.length/2 is our position, right in the middle?
-      case (c, idx) => {idx - viewStr.length/2}.abs
-    }
-
-    val safeDirectionsTowardFood = blah map { b => directionTowardIndex(b._2) } filter { d => isDirectionSafe(d) }
-
-    if (safeDirectionsTowardFood.length > 0) {
-      val ret = safeDirectionsTowardFood.head
-      println("going for food " + ret)
-      ret
-    } else {
-      val safe = safeDirections
-      if (safe.length > 0) {
-        println("going for safe " + safe.head)
-        Random.shuffle(safe).head
-      } else {
-        println("staying put")
-        Direction(0,0)
-      }
-    }
-  }
-
   def foodDirection = directionToward(foodSet)
   def enemyBotDirection = directionToward(enemyBot)
   def enemyCreatureDirection = directionToward(enemyCreature)
