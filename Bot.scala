@@ -270,9 +270,11 @@ trait BotUtils extends Config {
   val assassinOptionKey = "assissinOption"
   val explodeRadiusKey = "explodeRadius"
   def nearnessKey = "nearnessFactor"
+  val spawnCountKey = "spawnCount"
 
   def energySpawnMin = 200
   def assassinOptionMin = 500
+  def maxSpawnCount = 3
   def spawnAssassin = Random.nextInt(100) < 30
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
@@ -344,7 +346,7 @@ class Bot extends BotUtils {
       println("sd=" + spawndelay + " esm=" + energySpawnMin + " e=" + energy)
     }
 
-    spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
+    //spawndelay == 0 && (energySpawnMin == -1 || energy > energySpawnMin)
     energy > energySpawnMin && spawndelay == 0
   }
 
@@ -418,6 +420,7 @@ class Bot extends BotUtils {
         case "missile" => MissileBot().react(m, view)
       }
     } else {
+      println(m)
       react(m, view)
     }
   }
@@ -428,12 +431,38 @@ case class SlaveBot() extends Bot {
   def energy(m:inputMap) = m.getOrElse(energyKey, "0").toInt
   def getReturnEnergyThreshold(m:inputMap) = m.getOrElse(returnEnergyKey, createReturnEnergyThreshold)
   def getAssassinOption(m:inputMap) = m.getOrElse(assassinOptionKey, "no")
+  def getSpawnCount(m:inputMap) = m.getOrElse(spawnCountKey, "0")
 
   var botType = "slave"
+  var sc = 0
   def identity(m:inputMap) = prependBar(setKV(Set(BotProperty(botTypeKey, botType), 
                                          BotProperty(returnEnergyKey, getReturnEnergyThreshold(m)),
-                                         BotProperty(assassinOptionKey, getAssassinOption(m))
+                                         BotProperty(assassinOptionKey, getAssassinOption(m)),
+                                         BotProperty(spawnCountKey, sc.toString)
                                          )))
+
+  // TODO: make SlaveBot launch defensive missiles...
+  // and also spawn more slavebots?
+  
+  override def maybeSpawn(m:inputMap, v:View) = {
+    val generation = m.getOrElse(generationKey, "0").toInt
+    sc = getSpawnCount(m).toInt
+
+    if (sc > 2) {
+      println("already spawned out")
+    }
+
+    if (generation == 1 && sc <= 2) {
+      val ret = super.maybeSpawn(m, v)
+      if (!ret.isEmpty) {
+        sc += 500
+        println("spawn gen=" + generation + " sc=" + sc)
+      } 
+      ret
+    } else {
+      ""
+    }
+  }
 
   override def react(m:inputMap, v:View) = {
     if (debug) {
@@ -455,7 +484,13 @@ case class SlaveBot() extends Bot {
         move(v.masterDirection) + identity(m)
       }
     } else {
-      move(v.optionDirection) + identity(m)
+      val ret = 
+      move(v.foodDirection) + maybeSpawn(m, v) + identity(m)
+      //Move(direction=1:1)|Spawn(direction=-1:1,botType=missile)|Spawn(direction=0:-1,botType=slave,)|Set(spawndelay=0)|Set(botType=slave,
+      //returnEnergyAmount=593, assissinOption=no, spawnCount=1)
+      //
+      //println(ret)
+      ret
     }
 
     if (debug) {
