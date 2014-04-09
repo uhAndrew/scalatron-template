@@ -271,6 +271,8 @@ trait BotUtils extends Config {
   val explodeRadiusKey = "explodeRadius"
   def nearnessKey = "nearnessFactor"
   val spawnCountKey = "spawnCount"
+  def slaveCanSpawn = Random.nextInt(100) < 20
+  def canSpawnKey = "canSpawn"
 
   def energySpawnMin = 200
   def assassinOptionMin = 500
@@ -368,12 +370,20 @@ class Bot extends BotUtils {
       }
   }
 
+  def maybeSlaveCanSpawn(m:inputMap, v:View):String = {
+    "," + canSpawnKey + "=" + { if (slaveCanSpawn) {
+      "yes"
+    } else {
+      "no"
+    } }
+  }
+
   def maybeSpawn(m:inputMap, v:View):String = {
     if (canSpawn(m)) {
       val launch = maybeLaunch(m,v)
 
       val spawnString = if (launch.isEmpty) {
-        val extra = maybeAssassin(m,v)
+        val extra = maybeAssassin(m,v) + maybeSlaveCanSpawn(m,v)
         prependBar(spawn(v.foodDirection, "slave", extra))
       } else {
         launch
@@ -432,13 +442,17 @@ case class SlaveBot() extends Bot {
   def getReturnEnergyThreshold(m:inputMap) = m.getOrElse(returnEnergyKey, createReturnEnergyThreshold)
   def getAssassinOption(m:inputMap) = m.getOrElse(assassinOptionKey, "no")
   def getSpawnCount(m:inputMap) = m.getOrElse(spawnCountKey, "0")
+  def getCanSpawn(m:inputMap) = m.getOrElse(canSpawnKey, "no")
+
 
   var botType = "slave"
   var sc = 0
+  var canSpawn = "no"
   def identity(m:inputMap) = prependBar(setKV(Set(BotProperty(botTypeKey, botType), 
                                          BotProperty(returnEnergyKey, getReturnEnergyThreshold(m)),
                                          BotProperty(assassinOptionKey, getAssassinOption(m)),
-                                         BotProperty(spawnCountKey, sc.toString)
+                                         BotProperty(spawnCountKey, sc.toString),
+                                         BotProperty(canSpawnKey, canSpawn)
                                          )))
 
   // TODO: make SlaveBot launch defensive missiles...
@@ -446,19 +460,11 @@ case class SlaveBot() extends Bot {
   
   override def maybeSpawn(m:inputMap, v:View) = {
     val generation = m.getOrElse(generationKey, "0").toInt
-    sc = getSpawnCount(m).toInt
+    canSpawn = getCanSpawn(m)
 
-    if (sc > 2) {
-      println("already spawned out")
-    }
-
-    if (generation == 1 && sc <= 2) {
-      val ret = super.maybeSpawn(m, v)
-      if (!ret.isEmpty) {
-        sc += 500
-        println("spawn gen=" + generation + " sc=" + sc)
-      } 
-      ret
+    if (generation == 1 && canSpawn == "yes") {
+      // uh oh if a bot can spawn it will continually spawn until it is dead/reclaimed?
+      super.maybeSpawn(m,v)
     } else {
       ""
     }
