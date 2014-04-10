@@ -122,11 +122,19 @@ case class View(val viewStr:String) extends Config {
   }
 
   def foodDirection = directionToward(foodSet)
+  def fleeDirection = directionAway(badCell)
   def enemyBotDirection = directionToward(enemyBot)
   def enemyCreatureDirection = directionToward(enemyCreature)
   def masterDirection = directionToward(master) 
+
+  def masterDirectionFromInputMap(m:Map[String,String]) = {
+    //master -> 0:17
+    val masterDir = m("master")
+    val xy = masterDir.split(':')
+    Direction(xy(0).toInt, xy(1).toInt)
+  }
+
   //def masterDirection = if (nearDanger) fleeDirection else directionToward(master)
-  def fleeDirection = directionAway(badCell)
 
   def optionDirection = {
     /*
@@ -208,8 +216,8 @@ case class View(val viewStr:String) extends Config {
   lazy val enemyBot = otherBot ++ otherSlave
 
   //lazy val enemyCreature = otherBot ++ Set('b')
-  //lazy val enemyCreature = otherBot ++ otherSlave ++ Set('b')
-  lazy val enemyCreature = otherBot ++ Set('b')
+  lazy val enemyCreature = otherBot ++ otherSlave ++ Set('b')
+  //lazy val enemyCreature = otherBot ++ Set('b')
 
   lazy val danger = enemyBot ++ Set('b')
   lazy val badCell = enemyBot ++ badCreature ++ Set('W')
@@ -259,7 +267,7 @@ trait BotUtils extends Config {
     case Direction(x,y) => move(x,y)
   }
 
-  def createReturnEnergyThreshold:String = {Random.nextInt(750) + 500}.toString
+  def createReturnEnergyThreshold:String = {Random.nextInt(700) + 500}.toString
 
   val generationKey = "generation"
   val viewKey = "view"
@@ -271,17 +279,17 @@ trait BotUtils extends Config {
   val explodeRadiusKey = "explodeRadius"
   def nearnessKey = "nearnessFactor"
   val spawnCountKey = "spawnCount"
-  def slaveCanSpawn = Random.nextInt(100) < 20
+  def slaveCanSpawn = Random.nextInt(100) < 30
   def canSpawnKey = "canSpawn"
 
   def energySpawnMin = 200
   def assassinOptionMin = 500
   def maxSpawnCount = 3
-  def spawnAssassin = Random.nextInt(100) < 30
+  def spawnAssassin = false //true //Random.nextInt(100) < 20
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
-  val explodeRadius = 6
-  val nearnessFactor = 1
+  val explodeRadius = 7
+  val nearnessFactor = 2
 
   def spawn(dir:Direction, botType:String, energy:Int) = "Spawn(" + dir.toString + ",botType=" + botType + ",energy=" + energy + ")"
   def spawn(dir:Direction, botType:String) = "Spawn(" + dir.toString + ",botType=" + botType + ")"
@@ -430,7 +438,7 @@ class Bot extends BotUtils {
         case "missile" => MissileBot().react(m, view)
       }
     } else {
-      println(m)
+      //println(m)
       react(m, view)
     }
   }
@@ -476,6 +484,8 @@ case class SlaveBot() extends Bot {
       //println(m)
     }
 
+    //println(m)
+
     // gah this is set twice the first time... once here and once when identity is set the first time
     val returnEnergyThreshold = getReturnEnergyThreshold(m).toInt
 
@@ -487,7 +497,7 @@ case class SlaveBot() extends Bot {
         // TODO: get explodeRadius/nearness pair
         move(v.enemyBotDirection) + identity(m)
       } else {
-        move(v.masterDirection) + identity(m)
+        move(v.masterDirectionFromInputMap(m)) + identity(m)
       }
     } else {
       val ret = 
