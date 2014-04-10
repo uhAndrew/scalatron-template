@@ -131,7 +131,14 @@ case class View(val viewStr:String) extends Config {
     //master -> 0:17
     val masterDir = m("master")
     val xy = masterDir.split(':')
-    Direction(xy(0).toInt, xy(1).toInt)
+
+    val dir = Direction(xy(0).toInt, xy(1).toInt)
+
+    if (isNormalizedDirectionSafe(dir)) {
+      dir
+    } else {
+      randomSafeDirection
+    }
   }
 
   //def masterDirection = if (nearDanger) fleeDirection else directionToward(master)
@@ -145,6 +152,15 @@ case class View(val viewStr:String) extends Config {
     }
     */
    foodDirection
+  }
+
+  def randomSafeDirection = {
+    val safe = safeDirections
+    if (safe.length > 0) {
+      Random.shuffle(safe).head
+    } else {
+      Direction(0,0)
+    }
   }
 
   def directionToward(charSet:Set[Char]):Direction = {
@@ -236,6 +252,14 @@ case class View(val viewStr:String) extends Config {
     val newPos = selfPos.add(dir, sideLength)
     isPositionSafe(newPos)
   }
+
+  def normalizeDirection(dir:Direction) = {
+    val x = if (dir.x == 0) 0 else dir.x/dir.x.abs
+    val y = if (dir.y == 0) 0 else dir.y/dir.y.abs
+    Direction(x,y)
+  }
+
+  def isNormalizedDirectionSafe(dir:Direction):Boolean = isDirectionSafe(normalizeDirection(dir))
 
   lazy val possibleMoves = for {
     x <- Seq(-1,0,1)
