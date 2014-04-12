@@ -83,8 +83,8 @@ case class View(val viewStr:String) extends Config {
     var y = pos.y - selfPos.y
 
     // normalize
-    if (x.abs > 0) x = x/x.abs
-    if (y.abs > 0) y = y/y.abs
+    //if (x.abs > 0) x = x/x.abs
+    //if (y.abs > 0) y = y/y.abs
 
     Direction(x, y)
   }
@@ -127,6 +127,12 @@ case class View(val viewStr:String) extends Config {
   def enemyCreatureDirection = directionToward(enemyCreature)
   def masterDirection = directionToward(master) 
 
+  /* go toward high value food as first choice */
+  def smartFoodDirection = directionTowardOpt(prefferredFood) match {
+    case Some(dir) => dir
+    case None => directionToward(secondChoiceFood)
+  }
+
   def masterDirectionFromInputMap(m:Map[String,String]) = {
     //master -> 0:17
     val masterDir = m("master")
@@ -137,7 +143,8 @@ case class View(val viewStr:String) extends Config {
     if (isNormalizedDirectionSafe(dir)) {
       dir
     } else {
-      randomSafeDirection
+      //randomSafeDirection
+      foodDirection
     }
   }
 
@@ -163,7 +170,12 @@ case class View(val viewStr:String) extends Config {
     }
   }
 
-  def directionToward(charSet:Set[Char]):Direction = {
+  def directionToward(charSet:Set[Char]):Direction = directionTowardOpt(charSet) match {
+    case Some(dir) => dir
+    case None => randomSafeDirection
+  }
+
+  def directionTowardOpt(charSet:Set[Char]):Option[Direction] = {
     val cells = indexedViewStr.filter {
       case (c, idx) => charSet contains c
     }
@@ -177,18 +189,14 @@ case class View(val viewStr:String) extends Config {
           selfPos.delta(pos)
     }
 
-    val safeDirectionsToward = blah map { b => directionTowardIndex(b._2) } filter { d => isDirectionSafe(d) }
+    //val safeDirectionsToward = blah map { b => directionTowardIndex(b._2) } filter { d => isDirectionSafe(d) }
+    val safeDirectionsToward = blah map { b => directionTowardIndex(b._2) } filter { d => isNormalizedDirectionSafe(d) }
 
     if (safeDirectionsToward.length > 0) {
       val ret = safeDirectionsToward.head
-      ret
+      Some(ret)
     } else {
-      val safe = safeDirections
-      if (safe.length > 0) {
-        Random.shuffle(safe).head
-      } else {
-        Direction(0,0)
-      }
+      None
     }
   }
 
@@ -225,14 +233,18 @@ case class View(val viewStr:String) extends Config {
     Direction(Random.nextInt(3) - 1, Random.nextInt(3) - 1)
   }
 
+  // TODO: somehow prefer to chase more valuable food?
   lazy val foodSet = Set('P', 'B')
+  lazy val prefferredFood = Set('B')
+  lazy val secondChoiceFood = Set('P')
   lazy val otherBot = Set('m')
   lazy val otherSlave = Set('s')
   lazy val badCreature = Set('p', 'b')
   lazy val enemyBot = otherBot ++ otherSlave
 
   //lazy val enemyCreature = otherBot ++ Set('b')
-  lazy val enemyCreature = otherBot ++ otherSlave ++ Set('b')
+  //lazy val enemyCreature = otherBot ++ otherSlave ++ Set('b')
+  lazy val enemyCreature = otherBot ++ otherSlave
   //lazy val enemyCreature = otherBot ++ Set('b')
 
   lazy val danger = enemyBot ++ Set('b')
@@ -303,7 +315,7 @@ trait BotUtils extends Config {
   val explodeRadiusKey = "explodeRadius"
   def nearnessKey = "nearnessFactor"
   val spawnCountKey = "spawnCount"
-  def slaveCanSpawn = Random.nextInt(100) < 30
+  def slaveCanSpawn = if (Random.nextInt(100) < 50) "yes" else "no"
   def canSpawnKey = "canSpawn"
 
   def energySpawnMin = 200
@@ -386,6 +398,11 @@ class Bot extends BotUtils {
 
   def maybeLaunch(m:inputMap, v:View):String = {
     if (v.nearDanger) {
+
+  // TODO: actually use these values:
+  //val explodeRadius = 7
+  //val nearnessFactor = 2
+
       val extra = nearnessKey + "=8," + explodeRadiusKey + "=10"
       prependBar(spawn(v.enemyCreatureDirection, "missile", extra))
     } else {
@@ -402,13 +419,7 @@ class Bot extends BotUtils {
       }
   }
 
-  def maybeSlaveCanSpawn(m:inputMap, v:View):String = {
-    "," + canSpawnKey + "=" + { if (slaveCanSpawn) {
-      "yes"
-    } else {
-      "no"
-    } }
-  }
+  def maybeSlaveCanSpawn(m:inputMap, v:View):String = "," + canSpawnKey + "=" + slaveCanSpawn
 
   def maybeSpawn(m:inputMap, v:View):String = {
     if (canSpawn(m)) {
@@ -557,6 +568,8 @@ case class MissileBot() extends SlaveBot {
       ""
     }
   }
+
+  def missileStatus = prependBar(status("M"))
 
   override def react(m:inputMap, v:View) = {
     if (debug) {
