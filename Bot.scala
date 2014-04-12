@@ -324,8 +324,8 @@ trait BotUtils extends Config {
   def spawnAssassin = false //true //Random.nextInt(100) < 20
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
-  val explodeRadius = 7
-  val nearnessFactor = 2
+  val explodeRadius = 10
+  val nearnessFactor = 5
 
   def spawn(dir:Direction, botType:String, energy:Int) = "Spawn(" + dir.toString + ",botType=" + botType + ",energy=" + energy + ")"
   def spawn(dir:Direction, botType:String) = "Spawn(" + dir.toString + ",botType=" + botType + ")"
@@ -398,12 +398,7 @@ class Bot extends BotUtils {
 
   def maybeLaunch(m:inputMap, v:View):String = {
     if (v.nearDanger) {
-
-  // TODO: actually use these values:
-  //val explodeRadius = 7
-  //val nearnessFactor = 2
-
-      val extra = nearnessKey + "=8," + explodeRadiusKey + "=10"
+      val extra = nearnessKey + "=" + nearnessFactor + "," + explodeRadiusKey + "=" + explodeRadius
       prependBar(spawn(v.enemyCreatureDirection, "missile", extra))
     } else {
       ""
