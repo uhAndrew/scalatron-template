@@ -303,7 +303,7 @@ trait BotUtils extends Config {
     case Direction(x,y) => move(x,y)
   }
 
-  def createReturnEnergyThreshold:String = {Random.nextInt(700) + 500}.toString
+  def createReturnEnergyThreshold:String = {Random.nextInt(500) + 500}.toString
 
   val generationKey = "generation"
   val viewKey = "view"
@@ -315,17 +315,18 @@ trait BotUtils extends Config {
   val explodeRadiusKey = "explodeRadius"
   def nearnessKey = "nearnessFactor"
   val spawnCountKey = "spawnCount"
-  def slaveCanSpawn = if (Random.nextInt(100) < 50) "yes" else "no"
+  //def slaveCanSpawn = if (Random.nextInt(100) < 50) "yes" else "no"
+  def slaveCanSpawn = if (Random.nextInt(100) < 35) "yes" else "no"
   def canSpawnKey = "canSpawn"
 
   def energySpawnMin = 200
   def assassinOptionMin = 500
   def maxSpawnCount = 3
-  def spawnAssassin = false //true //Random.nextInt(100) < 20
+  def spawnAssassin = false //true //Random.nextInt(100) < 90
   //def spawnDelayTicks = 2
   def spawnDelayTicks = 0
-  val explodeRadius = 10
-  val nearnessFactor = 5
+  val explodeRadius = Random.nextInt(5) + 5
+  val nearnessFactor = Random.nextInt(3) + 3
 
   def spawn(dir:Direction, botType:String, energy:Int) = "Spawn(" + dir.toString + ",botType=" + botType + ",energy=" + energy + ")"
   def spawn(dir:Direction, botType:String) = "Spawn(" + dir.toString + ",botType=" + botType + ")"
